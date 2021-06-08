@@ -3,6 +3,7 @@ package study.boringkm.cloudfirestoretest
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -14,47 +15,49 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.storage.FirebaseStorage
+import java.io.File
 
 
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var storage: FirebaseStorage
     private val GET_GALLERY_IMAGE = 200
     private val STORAGE_PERM_CODE = 300
-    private lateinit var imageview: ImageView
+    private lateinit var imageViewToUpload: ImageView
+    private lateinit var imageViewToDownload: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        imageview = findViewById(R.id.uploadImageView)
+        imageViewToUpload = findViewById(R.id.uploadImageView)
+        imageViewToDownload = findViewById(R.id.downloadedImageView)
 
-        val bringGalleryButton: Button = findViewById(R.id.bringGalleryButton)
-        bringGalleryButton.setOnClickListener {
+        storage = FirebaseStorage.getInstance()
+
+        findViewById<Button>(R.id.bringGalleryButton).setOnClickListener {
             checkPermission()
         }
 
+        findViewById<Button>(R.id.downloadButton).setOnClickListener {
+            loadImageView()
+        }
+
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == GET_GALLERY_IMAGE && resultCode == RESULT_OK && data != null && data.data != null) {
-            val selectedImageUri: Uri = data.data!!
-            val storage = FirebaseStorage.getInstance()
-            val storageRef = storage.reference
-            val imageRef = storageRef.child("images/${selectedImageUri.lastPathSegment}")
-            val uploadTask = imageRef.putFile(selectedImageUri)
-
-            uploadTask.addOnFailureListener {
-                Toast.makeText(applicationContext, "업로드 실패", Toast.LENGTH_SHORT).show()
-            }.addOnSuccessListener {
-                Toast.makeText(applicationContext, "업로드 성공", Toast.LENGTH_SHORT).show()
-                imageview.setImageURI(selectedImageUri)
-                imageview.visibility = View.VISIBLE
-            }
+    private fun loadImageView() {
+        val storageRef = storage.reference
+        val testImageRef = storageRef.child("images/31997")
+        val imageFile = File.createTempFile("images", "jpg")
+        testImageRef.getFile(imageFile).addOnSuccessListener {
+            val bitmap = BitmapFactory.decodeFile(imageFile.path)
+            imageViewToDownload.setImageBitmap(bitmap)
+            imageViewToDownload.visibility = View.VISIBLE
+        }.addOnFailureListener {
+            e -> e.printStackTrace()
         }
     }
-
 
     private fun checkPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -98,5 +101,23 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(Intent.ACTION_PICK)
         intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
         startActivityForResult(intent, GET_GALLERY_IMAGE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == GET_GALLERY_IMAGE && resultCode == RESULT_OK && data != null && data.data != null) {
+            val selectedImageUri: Uri = data.data!!
+            val storageRef = storage.reference
+            val imageRef = storageRef.child("images/${selectedImageUri.lastPathSegment}")
+            val uploadTask = imageRef.putFile(selectedImageUri)
+
+            uploadTask.addOnFailureListener {
+                Toast.makeText(applicationContext, "업로드 실패", Toast.LENGTH_SHORT).show()
+            }.addOnSuccessListener {
+                Toast.makeText(applicationContext, "업로드 성공", Toast.LENGTH_SHORT).show()
+                imageViewToUpload.setImageURI(selectedImageUri)
+                imageViewToUpload.visibility = View.VISIBLE
+            }
+        }
     }
 }

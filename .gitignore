@@ -13,6 +13,6 @@ build
 gradle/wrapper/gradle-wrapper.jar
 gradlew
 gradlew.bat
-google-services.json
+app/google-services.json
 app/proguard-rules.pro
 app/build

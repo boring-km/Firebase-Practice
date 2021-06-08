@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.view.View
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,16 +20,18 @@ import com.google.firebase.storage.FirebaseStorage
 class MainActivity : AppCompatActivity() {
 
     private val GET_GALLERY_IMAGE = 200
-    private val PER_CODE = 300
+    private val STORAGE_PERM_CODE = 300
     private lateinit var imageview: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        imageview = findViewById(R.id.imageView)
-        imageview.setOnClickListener {
-            permissionCheck()
+        imageview = findViewById(R.id.uploadImageView)
+
+        val bringGalleryButton: Button = findViewById(R.id.bringGalleryButton)
+        bringGalleryButton.setOnClickListener {
+            checkPermission()
         }
 
     }
@@ -46,27 +50,26 @@ class MainActivity : AppCompatActivity() {
             }.addOnSuccessListener {
                 Toast.makeText(applicationContext, "업로드 성공", Toast.LENGTH_SHORT).show()
                 imageview.setImageURI(selectedImageUri)
+                imageview.visibility = View.VISIBLE
             }
         }
     }
 
 
-    fun permissionCheck() {
+    private fun checkPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            when {
+            when (PackageManager.PERMISSION_GRANTED) {
                 ContextCompat.checkSelfPermission(
                     applicationContext,
-                    Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED -> {
-                        Toast.makeText(applicationContext, "이미 권한 있음", Toast.LENGTH_SHORT).show()
-                        val intent = Intent(Intent.ACTION_PICK)
-                        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
-                        startActivityForResult(intent, GET_GALLERY_IMAGE)
-//                    shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    Manifest.permission.READ_EXTERNAL_STORAGE) -> {
+                    getGallery()
                 }
                 else -> {
-                    requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), PER_CODE)
+                    requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), STORAGE_PERM_CODE)
                 }
             }
+        } else {
+            getGallery()
         }
     }
 
@@ -77,13 +80,11 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {
-            PER_CODE -> {
+            STORAGE_PERM_CODE -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     Toast.makeText(applicationContext, "권한 생김", Toast.LENGTH_SHORT).show()
                 } else {
-                    val intent = Intent(Intent.ACTION_PICK)
-                    intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
-                    startActivityForResult(intent, GET_GALLERY_IMAGE)
+                    getGallery()
                 }
                 return
             }
@@ -91,5 +92,11 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(applicationContext, "예상치 못한 권한 요청", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun getGallery() {
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
+        startActivityForResult(intent, GET_GALLERY_IMAGE)
     }
 }
